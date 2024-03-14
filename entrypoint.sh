@@ -182,6 +182,14 @@ if [ "${MAIN}" == "yes" ]; then
         --source-bucket='*' \
         --dest-zones='*' \
         --dest-bucket='*'
+
+    echo "create objstorage-admin user"
+    radosgw-admin user create \
+        --uid=".objstorage-admin" \
+        --display-name=".objstorage-admin" \
+        --system \
+        --admin 
+
     radosgw-admin period update \
         --commit
 fi
