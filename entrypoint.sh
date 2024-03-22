@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+set -eu
+set -o pipefail
+
+NODE="$(hostname -s | grep -oP '^[a-z]+[0-9]+-[0-9a-z]+')"
+CLUSTER="$(hostname -s | grep -oP '^[a-z]+[0-9]+')"
 ZONE="$(hostname -s | grep -oP '^[a-z]+[0-9]+')"
 ZONE_GROUP="$(hostname -d | grep -oP '^[a-z0-9]+')"
 REALM="$(hostname -d | grep -oP '^[a-z0-9]+')"
@@ -186,7 +191,7 @@ if [ "${MAIN}" == "no" ]; then
     radosgw-admin realm pull \
         --url="http://${DOMAIN}:7480" \
         --access-key="${ACCESS_KEY}" \
-        --secret="${SECRET_KEY}"
+        --secret="${SECRET_KEY}"; do sleep 0.5; done
 
     echo "set default realm to ${ZONE_GROUP}"
     radosgw-admin realm default \
@@ -224,8 +229,8 @@ if [ "${MAIN}" == "yes" ] || [ "${MAIN}" == "no" ]; then
         --storage-class="ARCHIVE" \
         --data-pool "${ZONE}.rgw.buckets.archive.data" \
         --compression lz4
-    radosgw-admin period update \
-        --commit
+
+    radosgw-admin period update --commit
 
     ceph config set global rgw_enable_usage_log true
     radosgw --cluster ceph --rgw-zone "${ZONE}" --name "client.rgw.$(hostname -s)" --setuser ceph --setgroup ceph
