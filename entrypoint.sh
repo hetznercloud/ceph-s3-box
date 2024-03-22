@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eu
+set -eux
 set -o pipefail
 
 NODE="$(hostname -s | grep -oP '^[a-z]+[0-9]+-[0-9a-z]+')"
