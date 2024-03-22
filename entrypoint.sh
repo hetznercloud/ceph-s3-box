@@ -262,4 +262,8 @@ curl -X 'POST' \
 ##
 # log output in forground
 ##
-tail -F /var/log/ceph/ceph*
+while ! tail -F /var/log/ceph/ceph* ; do
+  sleep 0.1
+done
+
+echo "Container terminated ..."
