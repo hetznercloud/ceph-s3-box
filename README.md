@@ -57,7 +57,7 @@ podman network create local
 ```bash
 podman run \
     --hostname dev1-rgw1.dev.s3.localhost \
-    --network-alias=dev1.dev.s3.localhost \
+    --network-alias=dev1-dev.s3.localhost \
     --network-alias=dev.s3.localhost \
     --network=local \
     --ip 10.89.0.20 \
@@ -75,7 +75,7 @@ podman run \
 ```bash
 podman run \
     --hostname dev2-rgw1.dev.s3.localhost \
-    --network-alias=dev2.dev.s3.localhost \
+    --network-alias=dev2-dev.s3.localhost \
     --network=local \
     --ip 10.89.0.21 \
     -p7481:7480 \

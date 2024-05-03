@@ -3,8 +3,6 @@
 set -eux
 set -o pipefail
 
-NODE="$(hostname -s | grep -oP '^[a-z]+[0-9]+-[0-9a-z]+')"
-CLUSTER="$(hostname -s | grep -oP '^[a-z]+[0-9]+')"
 ZONE="$(hostname -s | grep -oP '^[a-z]+[0-9]+')"
 ZONE_GROUP="$(hostname -d | grep -oP '^[a-z0-9]+')"
 REALM="$(hostname -d | grep -oP '^[a-z0-9]+')"
@@ -21,6 +19,11 @@ fsid = $(uuidgen)
 mon_host = $(hostname -i)
 auth_allow_insecure_global_id_reclaimi = false
 mon_warn_on_pool_no_redundancy = false
+mon_osd_down_out_interval = 60
+mon_osd_report_timeout = 300
+mon_osd_down_out_subtree_limit = host
+mon_osd_reporter_subtree_level = rack
+osd_scrub_auto_repair = true
 osd_pool_default_size = 1
 osd_pool_default_min_size = 1
 osd_pool_default_pg_num = 1
@@ -49,18 +52,18 @@ ceph-authtool /tmp/ceph.mon.keyring \
 
 monmaptool \
     --create \
-    --add $(hostname -s) $(hostname -i) \
-    --fsid $(grep -oP '(?<=^fsid = )[0-9a-z-]*' /etc/ceph/ceph.conf) \
+    --add "$(hostname -s)" "$(hostname -i)" \
+    --fsid "$(grep -oP '(?<=^fsid = )[0-9a-z-]*' /etc/ceph/ceph.conf)" \
     --set-min-mon-release pacific \
     --enable-all-features \
     --clobber \
     /tmp/monmap
 
-mkdir -p /var/lib/ceph/mon/ceph-$(hostname -s)
-rm -rf /var/lib/ceph/mon/ceph-$(hostname -s)/*
-ceph-mon --mkfs -i $(hostname -s) --monmap /tmp/monmap --keyring /tmp/ceph.mon.keyring
+mkdir -p "/var/lib/ceph/mon/ceph-$(hostname -s)"
+rm -rf "/var/lib/ceph/mon/ceph-$(hostname -s)/*"
+ceph-mon --mkfs -i "$(hostname -s)" --monmap /tmp/monmap --keyring /tmp/ceph.mon.keyring
 chown -R ceph:ceph /var/lib/ceph/mon/
-ceph-mon --cluster ceph --id $(hostname -s) --setuser ceph --setgroup ceph
+ceph-mon --cluster ceph --id "$(hostname -s)" --setuser ceph --setgroup ceph
 ceph config set global auth_allow_insecure_global_id_reclaim false
 
 ##
@@ -68,11 +71,11 @@ ceph config set global auth_allow_insecure_global_id_reclaim false
 ##
 echo "create ceph mgr"
 
-mkdir -p /var/lib/ceph/mgr/ceph-$(hostname -s)
-ceph auth get-or-create mgr.$(hostname -s) mon 'allow profile mgr' osd 'allow *' mds 'allow *' \
-    > /var/lib/ceph/mgr/ceph-$(hostname -s)/keyring
+mkdir -p "/var/lib/ceph/mgr/ceph-$(hostname -s)"
+ceph auth get-or-create "mgr.$(hostname -s)" mon 'allow profile mgr' osd 'allow *' mds 'allow *' \
+    > "/var/lib/ceph/mgr/ceph-$(hostname -s)/keyring"
 chown -R ceph:ceph /var/lib/ceph/mgr/
-ceph-mgr --cluster ceph --id $(hostname -s) --setuser ceph --setgroup ceph
+ceph-mgr --cluster ceph --id "$(hostname -s)" --setuser ceph --setgroup ceph
 
 ##
 # crate osd
@@ -80,22 +83,22 @@ ceph-mgr --cluster ceph --id $(hostname -s) --setuser ceph --setgroup ceph
 OSD=$(ceph osd create)
 echo "create ceph osd.${OSD}"
 
-mkdir -p /osd/osd.${OSD}/data
-ceph auth get-or-create osd.${OSD} mon 'allow profile osd' mgr 'allow profile osd' osd 'allow *' \
-    > /osd/osd.${OSD}/data/keyring
-ceph-osd -i ${OSD} --mkfs --osd-data /osd/osd.${OSD}/data
-chown -R ceph:ceph /osd/osd.${OSD}/data
-ceph-osd -i ${OSD} --osd-data /osd/osd.${OSD}/data --keyring /osd/osd.${OSD}/data/keyring
+mkdir -p "/osd/osd.${OSD}/data"
+ceph auth get-or-create "osd.${OSD}" mon 'allow profile osd' mgr 'allow profile osd' osd 'allow *' \
+    > "/osd/osd.${OSD}/data/keyring"
+ceph-osd -i "${OSD}" --mkfs --osd-data "/osd/osd.${OSD}/data"
+chown -R ceph:ceph "/osd/osd.${OSD}/data"
+ceph-osd -i "${OSD}" --osd-data "/osd/osd.${OSD}/data" --keyring "/osd/osd.${OSD}/data/keyring"
 
 ##
 # create rgw
 ##
 echo "create ceph rgw"
 
-mkdir -p /var/lib/ceph/radosgw/ceph-rgw.$(hostname -s)
-ceph auth get-or-create client.rgw.$(hostname -s) osd 'allow rwx' mon 'allow rw' \
-    -o /var/lib/ceph/radosgw/ceph-rgw.$(hostname -s)/keyring
-touch /var/lib/ceph/radosgw/ceph-rgw.$(hostname -s)/done
+mkdir -p "/var/lib/ceph/radosgw/ceph-rgw.$(hostname -s)"
+ceph auth get-or-create "client.rgw.$(hostname -s)" osd 'allow rwx' mon 'allow rw' \
+    -o "/var/lib/ceph/radosgw/ceph-rgw.$(hostname -s)/keyring"
+touch "/var/lib/ceph/radosgw/ceph-rgw.$(hostname -s)/done"
 chown -R ceph:ceph /var/lib/ceph/radosgw
 
 if [ "${MAIN}" == "none" ]; then
@@ -109,7 +112,7 @@ if [ "${MAIN}" == "none" ]; then
         --secret-key="${SECRET_KEY}"
 
     ceph config set global rgw_enable_usage_log true
-    ceph config set global rgw_dns_name $(hostname -s)
+    ceph config set global rgw_dns_name "$(hostname -s)"
 
     radosgw --cluster ceph --rgw-zone "default" --name "client.rgw.$(hostname -s)" --setuser ceph --setgroup ceph
 fi
@@ -128,15 +131,19 @@ if [ "${MAIN}" == "yes" ]; then
         --master \
         --default
 
-    #radosgw-admin zonegroup get --rgw-zonegroup="${ZONE_GROUP}" | \
-    #    jq --arg domain "${DOMAIN}" '.hostnames |= [$domain]' | \
-    #    radosgw-admin zonegroup set --rgw-zonegroup="${ZONE_GROUP}" -i -
+    radosgw-admin zonegroup get --rgw-zonegroup="${ZONE_GROUP}" | \
+        jq \
+            --arg domain "${DOMAIN}" \
+            --arg zone1 "dev1-${DOMAIN}" \
+            --arg zone2 "dev2-${DOMAIN}" \
+            '.hostnames |= [$domain, $zone1, $zone2]' | \
+        radosgw-admin zonegroup set --rgw-zonegroup="${ZONE_GROUP}" -i -
 
     echo "create zone ${ZONE}"
     radosgw-admin zone create \
         --rgw-zonegroup="${ZONE_GROUP}" \
         --rgw-zone="${ZONE}" \
-        --endpoints="http://${ZONE}.${DOMAIN}:7480" \
+        --endpoints="http://${ZONE}-${DOMAIN}:7480" \
         --master \
         --default
 
@@ -167,21 +174,41 @@ if [ "${MAIN}" == "yes" ]; then
         --access-key="${ACCESS_KEY}" \
         --secret-key="${SECRET_KEY}"
 
+    ##
+    # disable the defaut sync of buckets between zones, 
+    # but allow specific ones to replicate
+    ##
     radosgw-admin sync group create \
-        --group-id=group1 \
-        --status=forbidden
+        --group-id=group-main \
+        --status=allowed
     radosgw-admin sync group flow create \
-        --group-id=group1 \
-        --flow-id=flow-mirror \
+        --group-id=group-main \
+        --flow-id=flow-main \
         --flow-type=symmetrical \
-        --zones='*'
+        --zones=dev1,dev2
     radosgw-admin sync group pipe create \
-        --group-id=group1 \
-        --pipe-id=pipe1 \
+        --group-id=group-main \
+        --pipe-id=pipe-main \
         --source-zones='*' \
         --source-bucket='*' \
         --dest-zones='*' \
         --dest-bucket='*'
+
+    ##
+    # enable mirroring for a specific bucket between zones
+    ##                      
+    # radosgw-admin sync group create \
+    #     --bucket=test1 \
+    #     --group-id=group-test1 \
+    #     --status=enabled
+    # radosgw-admin sync group pipe create \
+    #     --bucket=test1 \
+    #     --group-id=group-test1 \
+    #     --pipe-id=pipe-test1 \
+    #     --source-zones='*' \
+    #     --source-bucket='*' \
+    #     --dest-zones='*' \
+    #     --dest-bucket='*'
 
     echo "create objstorage-admin user"
     radosgw-admin user create \
@@ -196,7 +223,7 @@ fi
 
 if [ "${MAIN}" == "no" ]; then
     echo "get realm http://${DOMAIN}:7480"
-    radosgw-admin realm pull \
+    while ! radosgw-admin realm pull \
         --url="http://${DOMAIN}:7480" \
         --access-key="${ACCESS_KEY}" \
         --secret="${SECRET_KEY}"; do sleep 0.5; done
@@ -211,7 +238,7 @@ if [ "${MAIN}" == "no" ]; then
         --rgw-zone="${ZONE}" \
         --access-key="${ACCESS_KEY}" \
         --secret-key="${SECRET_KEY}" \
-        --endpoints=http://"${ZONE}"."${DOMAIN}":7480 \
+        --endpoints="http://${ZONE}-${DOMAIN}:7480" \
         --default
 fi
 
@@ -252,7 +279,7 @@ ceph mgr module enable stats --force
 ceph mgr module disable nfs
 ceph config set mgr mgr/dashboard/ssl false --force
 ceph dashboard feature disable rbd cephfs nfs iscsi mirroring
-echo "${MGR_PASSWORD}" | ceph dashboard ac-user-create ${MGR_USERNAME} -i - administrator --force-password
+echo "${MGR_PASSWORD}" | ceph dashboard ac-user-create "${MGR_USERNAME}" -i - administrator --force-password
 echo "${ACCESS_KEY}" | ceph dashboard set-rgw-api-access-key -i -
 echo "${SECRET_KEY}" | ceph dashboard set-rgw-api-secret-key -i -
 ceph dashboard set-rgw-api-ssl-verify False
