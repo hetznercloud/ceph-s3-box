@@ -2,7 +2,7 @@
 ARG IMAGE_PROXY=""
 ARG DEBIAN_FRONTEND=noninteractive
 
-FROM ${IMAGE_PROXY}ubuntu:24.04 AS ceph
+FROM ${IMAGE_PROXY}ubuntu:22.04 AS ceph
 ENV TZ=Etc/UTC
 
 RUN apt -y update && apt -y install \
