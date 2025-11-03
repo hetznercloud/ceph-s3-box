@@ -17,7 +17,7 @@ cat <<- EOF > /etc/ceph/ceph.conf
 [global]
 fsid = $(uuidgen)
 mon_host = $(hostname -i)
-auth_allow_insecure_global_id_reclaimi = false
+auth_allow_insecure_global_id_reclaim = false
 mon_warn_on_pool_no_redundancy = false
 mon_osd_down_out_interval = 60
 mon_osd_report_timeout = 300
